@@ -1,0 +1,71 @@
+name: Sync Archify plugin
+
+on:
+  schedule:
+    - cron: '23 20 * * *' # Daily at 04:23 Asia/Shanghai (GitHub may delay schedules).
+  workflow_dispatch:
+  push:
+    branches: [packaging]
+    paths:
+      - '.github/plugin/**'
+      - '.github/workflows/sync-plugin.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: archify-plugin-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'qwang07/archify'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          ref: packaging
+          path: fork
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          repository: tt-a1i/archify
+          ref: main
+          path: upstream
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+      - name: Package the unchanged upstream skill
+        run: node fork/.github/plugin/build-package.mjs upstream "$RUNNER_TEMP/archify-plugin"
+      - name: Check the packaged CLI
+        run: node "$RUNNER_TEMP/archify-plugin/skills/archify/bin/archify.mjs" doctor
+      - name: Publish only after validation succeeds
+        working-directory: fork
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          existing="$(git ls-remote --heads origin refs/heads/plugin)"
+          package_worktree="$RUNNER_TEMP/plugin-branch"
+          if [[ -n "$existing" ]]; then
+            git fetch --depth=1 origin refs/heads/plugin
+            git worktree add --detach "$package_worktree" FETCH_HEAD
+          else
+            git worktree add --detach "$package_worktree" HEAD
+            git -C "$package_worktree" checkout --orphan plugin-first-publish
+          fi
+          # This worktree is disposable. Only the generated package is published;
+          # upstream workflows never enter the distribution branch.
+          git -C "$package_worktree" rm -rf --ignore-unmatch .
+          cp -a "$RUNNER_TEMP/archify-plugin/." "$package_worktree/"
+          git -C "$package_worktree" add --all
+          if git -C "$package_worktree" diff --cached --quiet; then
+            echo 'Plugin already matches upstream.' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          version="$(node -p "require(process.env.RUNNER_TEMP + '/archify-plugin/plugin.json').version")"
+          git -C "$package_worktree" commit -m "Sync Archify plugin ${version}"
+          git -C "$package_worktree" push origin HEAD:refs/heads/plugin
+          echo "Published Archify ${version}. See plugin/upstream.json for provenance." >> "$GITHUB_STEP_SUMMARY"
