@@ -16,7 +16,7 @@ branch intact. Ordinary fast-forward pushes preserve history and reject races;
 there is no force push, merge-conflict resolution, or personal token secret.
 
 `upstream.json` records the source commit, original skill-tree hash and upstream
-version. The plugin version appends the skill-tree hash as SemVer build metadata,
+version. The plugin version appends the skill-tree hash and a packaging revision as SemVer build metadata,
 so changes before a version bump have distinct cache identities. Provenance
 changes can publish even when the skill tree itself is unchanged.
 

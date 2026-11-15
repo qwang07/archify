@@ -17,7 +17,7 @@ const commit = execFileSync('git', ['-C', source, 'rev-parse', 'HEAD'], { encodi
 const tree = execFileSync('git', ['-C', source, 'rev-parse', 'HEAD:archify'], { encoding: 'utf8' }).trim();
 // Include the upstream tree identity in package identity: main can change before
 // its next release. A new skill tree must not reuse an installed cache version.
-const pluginVersion = `${version}+upstream.${tree.slice(0, 12)}`;
+const pluginVersion = `${version}+upstream.${tree.slice(0, 12)}.packaging.1`;
 const description = 'Create interactive architecture, workflow and sequence diagrams, or source-backed one-page explainers.';
 const manifest = {
   name: 'archify', version: pluginVersion, description,
@@ -31,10 +31,14 @@ mkdirSync(join(output, 'skills'), { recursive: true });
 cpSync(skill, join(output, 'skills', 'archify'), { recursive: true });
 writeJson(join(output, 'plugin.json'), {
   $schema: 'https://agent-plugins.org/schemas/1.0.0/plugin.schema.json', ...manifest,
+  extensions: { 'com.openai': { interface: { displayName: 'Archify' } } },
 });
 for (const host of ['.codex-plugin', '.claude-plugin']) {
   mkdirSync(join(output, host));
-  writeJson(join(output, host, 'plugin.json'), { ...manifest, skills: './skills/' });
+  writeJson(join(output, host, 'plugin.json'), {
+    ...manifest, skills: './skills/',
+    ...(host === '.codex-plugin' ? { interface: { displayName: 'Archify' } } : {}),
+  });
 }
 for (const file of ['LICENSE', 'LICENSE-MIT', 'NOTICE', 'THIRD_PARTY_NOTICES.md']) {
   cpSync(join(skill, file), join(output, file));
