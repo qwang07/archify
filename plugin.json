@@ -1,12 +1,19 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "archify",
-  "version": "3.2.0+upstream.03645a096811",
+  "version": "3.2.0+upstream.03645a096811.packaging.1",
   "description": "Create interactive architecture, workflow and sequence diagrams, or source-backed one-page explainers.",
   "author": {
     "name": "Archify contributors"
   },
   "homepage": "https://github.com/tt-a1i/archify",
   "repository": "https://github.com/qwang07/archify",
-  "license": "Apache-2.0"
+  "license": "Apache-2.0",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Archify"
+      }
+    }
+  }
 }
