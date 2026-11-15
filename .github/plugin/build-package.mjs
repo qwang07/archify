@@ -17,7 +17,7 @@ const commit = execFileSync('git', ['-C', source, 'rev-parse', 'HEAD'], { encodi
 const tree = execFileSync('git', ['-C', source, 'rev-parse', 'HEAD:archify'], { encoding: 'utf8' }).trim();
 // Include the upstream tree identity in package identity: main can change before
 // its next release. A new skill tree must not reuse an installed cache version.
-const pluginVersion = `${version}+upstream.${tree.slice(0, 12)}.packaging.1`;
+const pluginVersion = `${version}+upstream.${tree.slice(0, 12)}.packaging.2`;
 const description = 'Create interactive architecture, workflow and sequence diagrams, or source-backed one-page explainers.';
 const manifest = {
   name: 'archify', version: pluginVersion, description,

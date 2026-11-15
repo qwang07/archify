@@ -33,14 +33,14 @@ jobs:
           ref: main
           path: upstream
           persist-credentials: false
+          fetch-depth: 1
+          sparse-checkout: archify
       - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 22
       - name: Package the unchanged upstream skill
         run: node fork/.github/plugin/build-package.mjs upstream "$RUNNER_TEMP/archify-plugin"
-      - name: Check the packaged CLI
-        run: node "$RUNNER_TEMP/archify-plugin/skills/archify/bin/archify.mjs" doctor
-      - name: Publish only after validation succeeds
+      - name: Stage, validate and publish the plugin directory
         working-directory: fork
         shell: bash
         run: |
@@ -59,7 +59,9 @@ jobs:
           # This worktree is disposable. Only the generated package is published;
           # upstream workflows never enter the distribution branch.
           git -C "$package_worktree" rm -rf --ignore-unmatch .
-          cp -a "$RUNNER_TEMP/archify-plugin/." "$package_worktree/"
+          mkdir -p "$package_worktree/plugins/archify"
+          cp -a "$RUNNER_TEMP/archify-plugin/." "$package_worktree/plugins/archify/"
+          node "$package_worktree/plugins/archify/skills/archify/bin/archify.mjs" doctor
           git -C "$package_worktree" add --all
           if git -C "$package_worktree" diff --cached --quiet; then
             echo 'Plugin already matches upstream.' >> "$GITHUB_STEP_SUMMARY"
@@ -68,4 +70,4 @@ jobs:
           version="$(node -p "require(process.env.RUNNER_TEMP + '/archify-plugin/plugin.json').version")"
           git -C "$package_worktree" commit -m "Sync Archify plugin ${version}"
           git -C "$package_worktree" push origin HEAD:refs/heads/plugin
-          echo "Published Archify ${version}. See plugin/upstream.json for provenance." >> "$GITHUB_STEP_SUMMARY"
+          echo "Published Archify ${version}. See plugin:plugins/archify/upstream.json for provenance." >> "$GITHUB_STEP_SUMMARY"
